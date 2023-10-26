@@ -1,31 +1,38 @@
 from scapy.all import *
 import socket
+import time
 
-#TraceRoute (Ejercicio 1)
+# TraceRoute (Ejercicio 1)
 def traceRoute(destination):
     TimeToLive = 1
-    maxHops = 64 # Son 30 por convencion
+    maxHops = 30
     hostIP = socket.gethostbyname(destination)
-
 
     print("Destination IP: {hostIP}".format(hostIP=hostIP))
 
-    while TimeToLive < maxHops:
-        # Crea el ICMP Echo Request packet con TTL
+    while TimeToLive <= maxHops:  # Adjust the loop condition to include maxHops
+        # Create the ICMP Echo Request packet with TTL
         packet = IP(dst=destination, ttl=TimeToLive) / ICMP(type=8, code=0)
 
-        # Capturamos el paquete
+        # Capture the packet and record the timestamp before sending
+        start_time = time.time()
         reply = sr1(packet, verbose=0, timeout=1)
 
         if reply is None:
-            # Si no hay respuesta se imprime '*'
-            print(f"{TimeToLive}: *")
+            # If there is no response, print '*' and calculate the time
+            end_time = time.time()
+            print(f"[{TimeToLive}] * (Time: {int((end_time - start_time) * 1000)} ms)")
         else:
-            # Si se recibe una respuesta, se devuelve el IP del host
-            print(f"{TimeToLive}: {reply.src}")
+            # If a response is received, print the source IP and calculate the time
+            end_time = time.time()
+            print(f"[{TimeToLive}] {reply.src} (Time: {int((end_time - start_time) * 1000)} ms)")
 
-            # Paramos cuando llegamos al destino
+            # Stop when we reach the destination
             if reply.src == hostIP:
                 break
 
         TimeToLive += 1
+
+if __name__ == "__main__":
+    destination = input("Destino: ")
+    traceRoute(destination)
