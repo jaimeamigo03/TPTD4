@@ -1,3 +1,7 @@
+from scapy.all import *
+import socket
+import time
+
 def traceRoute(destination):
     TimeToLive = 1
     maxHops = 30
