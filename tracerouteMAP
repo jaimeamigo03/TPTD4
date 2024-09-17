@@ -1,0 +1,57 @@
+from scapy.all import *
+import socket
+import folium
+from geolite2 import geolite2
+
+def get_location(ip):
+    reader = geolite2.reader()
+    location = reader.get(ip)
+    geolite2.close()
+    return location
+
+def traceRoute(destination):
+    TimeToLive = 1
+    maxHops = 30
+    hostIP = socket.gethostbyname(destination)
+    hop_path = []  # List to store the path of IP addresses
+
+    print("Destination IP: {hostIP}".format(hostIP=hostIP))
+
+    m = folium.Map(location=[0, 0], zoom_start=2)  # Initialize a map
+    locations = []  # List to store locations for polyline
+
+    while TimeToLive < maxHops:
+        packet = IP(dst=destination, ttl=TimeToLive) / ICMP(type=8, code=0)
+        reply = sr1(packet, verbose=0, timeout=1)
+
+        if reply is None:
+            print(f"{TimeToLive}: *")
+        else:
+            print(f"{TimeToLive}: {reply.src}")
+            hop_path.append(reply.src)
+
+            location = get_location(reply.src)
+            if location:
+                folium.Marker([location['location']['latitude'], location['location']['longitude']],
+                              tooltip=reply.src).add_to(m)
+                locations.append([location['location']['latitude'], location['location']['longitude']])
+
+            if reply.src == hostIP:
+                break
+
+        TimeToLive += 1
+
+    print("Hop Path: " + " -> ".join(hop_path))
+
+    if len(locations) > 1:
+        folium.PolyLine(locations, color="blue").add_to(m)  # Create a polyline
+
+    m.save('traceroute_map.html')  # Save the map to an HTML file
+
+if __name__ == "__main__":
+    destination = input("Enter the destination: ")
+    funcion = input("Which function do you want to run (traceroute or portscanner): ")
+
+    if funcion == "traceroute":
+        traceRoute(destination)
+    # Add your code for portscanner if needed
